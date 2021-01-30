@@ -29,20 +29,26 @@ namespace testapp
         {
             using (new ButtonLayoutManager(buttonLayout, buttonPrefab)) {
 
+                firstButton = new BTLButton("Button1", onClick).button;
+
                 using (new BTLHorizontal()) {
-                    firstButton = new BTLButton("Button1", onClick).button;
                     using (new BTLVertical()) {
-                        new BTLButton("Button2", onClick);
+                        new BTLButton("Button2-1", onClick);
+                        new BTLButton("Button2-2", onClick);
+
                         using (new BTLHorizontal()) {
                             using (new BTLVertical()) {
-                                new BTLButton("Button3", onClick);
-                                new BTLButton("Button4", onClick);
+                                new BTLButton("Button3-1", onClick);
+   
                             }
                             using (new BTLVertical()) {
-                                new BTLButton("Button5", onClick);
-                                new BTLButton("Button6", onClick);
+                                new BTLButton("Button3-2", onClick);
+                                new BTLButton("Button3-3", onClick);
                             }
                         }
+                    }
+                    using (new BTLVertical()) {
+                        new BTLButton("Button2-3", onClick);
                     }
                 }
             }

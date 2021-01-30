@@ -43,7 +43,7 @@ namespace BTL
         {
             var position = Vector2.zero;
             var size = rectTransform.rect.size;
-            container.ApplyLayout(new Rect(position, size));
+            container.ApplyLayout(position, size.x);
 
             instance = null;
         }
@@ -67,7 +67,7 @@ namespace BTL
             /// </summary>
             /// <param name="rect">描画可能座標とサイズ</param>
             /// <returns>描画サイズ</returns>
-            public abstract Vector2 ApplyLayout(Rect rect);
+            public abstract Vector2 ApplyLayout(Vector2 position, float width);
         }
 
         public abstract class Container : Item, System.IDisposable
@@ -95,15 +95,14 @@ namespace BTL
 
     public class BTLVertical : ButtonLayoutManager.Container
     {
-        public override Vector2 ApplyLayout(Rect rect)
+        public override Vector2 ApplyLayout(Vector2 position, float width)
         {
             if (childs.Count == 0) return Vector2.zero;
 
-            var position = rect.position;
-            var newSize = new Vector2(rect.width, 0.0f);
+            var newSize = new Vector2(width, 0.0f);
 
             foreach (var item in childs) {
-                var size = item.ApplyLayout(new Rect(position, rect.size));
+                var size = item.ApplyLayout(position, width);
 
                 position.y += -(size.y);
                 newSize.y += size.y;
@@ -114,17 +113,16 @@ namespace BTL
 
     public class BTLHorizontal : ButtonLayoutManager.Container
     {
-        public override Vector2 ApplyLayout(Rect rect)
+        public override Vector2 ApplyLayout(Vector2 position, float width)
         {
             if (childs.Count == 0) return Vector2.zero;
 
-            var width = rect.width / childs.Count;
+            width = width / childs.Count;
 
-            var position = rect.position;
             var newSize = Vector2.zero;
 
             foreach (var item in childs) {
-                var size = item.ApplyLayout(new Rect(position, new Vector2(width, rect.height)));
+                var size = item.ApplyLayout(position, width);
 
                 if (newSize.x * newSize.y < size.x * size.x) {
                     newSize = size;
@@ -157,7 +155,7 @@ namespace BTL
             }
         }
 
-        public override Vector2 ApplyLayout(Rect rect)
+        public override Vector2 ApplyLayout(Vector2 position, float width)
         {
             if (text) {
                 text.text = label;
@@ -167,10 +165,10 @@ namespace BTL
             if (rectTransform) {
                 rectTransform.anchorMin = new Vector2(0, 1);
                 rectTransform.anchorMax = new Vector2(0, 1);
-                rectTransform.localPosition = new Vector2(rect.position.x + layoutManager.buttonMargin, rect.position.y - layoutManager.buttonMargin);
-                rectTransform.sizeDelta = new Vector2(rect.width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
+                rectTransform.localPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
+                rectTransform.sizeDelta = new Vector2(width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
 
-                return new Vector2(rect.width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
+                return new Vector2(width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
             }
             return Vector2.zero;
         }
