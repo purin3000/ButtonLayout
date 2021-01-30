@@ -20,11 +20,13 @@ namespace testapp
         [SerializeField]
         ButtonLayoutResources resources;
 
+        ButtonLayoutManager layoutManager;
+
         public void Start()
         {
             textTitle.text = "ButtonLayout Example";
 
-            var layoutManager = new ButtonLayoutManager(resources);
+            layoutManager = new ButtonLayoutManager(resources);
 
             using (new BTLBuilder(layoutManager)) {
 
@@ -54,6 +56,11 @@ namespace testapp
 
                 EventSystem.current.SetSelectedGameObject(firstButton.gameObject);
             }
+        }
+
+        private void Update()
+        {
+            layoutManager.UpdateLayout();
         }
 
         void onClick(Button button) => textLog.text = button.name;
