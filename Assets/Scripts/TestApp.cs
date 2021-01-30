@@ -18,18 +18,15 @@ namespace testapp
         Text textLog = null;
 
         [SerializeField]
-        RectTransform buttonLayout = null;
-
-        [SerializeField]
-        Button buttonPrefab = null;
-
-        Button firstButton;
+        ButtonLayoutResources resources;
 
         public void Start()
         {
-            using (new ButtonLayoutManager(buttonLayout, buttonPrefab)) {
+            textTitle.text = "ButtonLayout Example";
 
-                firstButton = new BTLButton("Button1", onClick).button;
+            using (new ButtonLayoutManager(resources)) {
+
+                var firstButton = new BTLButton("Button1", onClick).button;
 
                 using (new BTLHorizontal()) {
                     using (new BTLVertical()) {
@@ -49,14 +46,16 @@ namespace testapp
                     }
                     using (new BTLVertical()) {
                         new BTLButton("Button2-3", onClick);
+                        new BTLToggle("Button2-3", onValueChanged);
                     }
                 }
-            }
 
-            EventSystem.current.SetSelectedGameObject(firstButton.gameObject);
+                EventSystem.current.SetSelectedGameObject(firstButton.gameObject);
+            }
         }
 
         void onClick(Button button) => textLog.text = button.name;
+        void onValueChanged(Toggle toggle, bool ret) => textLog.text = $"{toggle.name}:{ret}";
     }
 }
 

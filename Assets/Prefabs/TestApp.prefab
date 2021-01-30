@@ -218,9 +218,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   textTitle: {fileID: 7666158300650975527}
   textLog: {fileID: 5291881193313104472}
-  buttonLayout: {fileID: 8966278826120359139}
-  buttonPrefab: {fileID: 3189688980052593943, guid: da1fa8c87dad74efe9320cbbcd036d54,
-    type: 3}
+  resources:
+    rectTransform: {fileID: 8966278826120359139}
+    buttonPrefab: {fileID: 3189688980052593943, guid: da1fa8c87dad74efe9320cbbcd036d54,
+      type: 3}
+    togglePrefab: {fileID: 2452325538741412684, guid: bbe18814a8309af48a464825db4ed48d,
+      type: 3}
 --- !u!1 &5291881193096476430
 GameObject:
   m_ObjectHideFlags: 0
