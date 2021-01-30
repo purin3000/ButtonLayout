@@ -71,6 +71,23 @@ namespace BTL
             /// <returns>描画サイズ</returns>
             public abstract Vector2 ApplyLayout(Vector2 position, float width);
             public virtual int CalColumn() => 1;
+            protected Vector2 ButtonApplyLayoutImpl(Text text, RectTransform rectTransform, string label, Vector2 position, float width)
+            {
+                if (text) {
+                    text.text = label;
+                    text.fontSize = layoutManager.fontSize;
+                }
+
+                if (rectTransform) {
+                    rectTransform.anchorMin = new Vector2(0, 1);
+                    rectTransform.anchorMax = new Vector2(0, 1);
+                    rectTransform.localPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
+                    rectTransform.sizeDelta = new Vector2(width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
+
+                    return new Vector2(width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
+                }
+                return Vector2.zero;
+            }
         }
 
         public abstract class Container : Item, System.IDisposable
@@ -184,23 +201,7 @@ namespace BTL
             }
         }
 
-        public override Vector2 ApplyLayout(Vector2 position, float width)
-        {
-            if (text) {
-                text.text = label;
-                text.fontSize = layoutManager.fontSize;
-            }
-
-            if (rectTransform) {
-                rectTransform.anchorMin = new Vector2(0, 1);
-                rectTransform.anchorMax = new Vector2(0, 1);
-                rectTransform.localPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
-                rectTransform.sizeDelta = new Vector2(width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
-
-                return new Vector2(width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
-            }
-            return Vector2.zero;
-        }
+        public override Vector2 ApplyLayout(Vector2 position, float width) => ButtonApplyLayoutImpl(text, rectTransform, label, position, width);
     }
 
     public class BTLToggle : ButtonLayoutManager.Item
@@ -223,22 +224,6 @@ namespace BTL
             }
         }
 
-        public override Vector2 ApplyLayout(Vector2 position, float width)
-        {
-            if (text) {
-                text.text = label;
-                text.fontSize = layoutManager.fontSize;
-            }
-
-            if (rectTransform) {
-                rectTransform.anchorMin = new Vector2(0, 1);
-                rectTransform.anchorMax = new Vector2(0, 1);
-                rectTransform.localPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
-                rectTransform.sizeDelta = new Vector2(width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
-
-                return new Vector2(width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
-            }
-            return Vector2.zero;
-        }
+        public override Vector2 ApplyLayout(Vector2 position, float width) => ButtonApplyLayoutImpl(text, rectTransform, label, position, width);
     }
 }
