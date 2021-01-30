@@ -35,7 +35,7 @@ namespace BTL
 #else
             fontSize = 28;
             buttonHeight = fontSize + 10;
-            buttonMargin = 3;
+            buttonMargin = 2;
 #endif
         }
 
@@ -43,14 +43,14 @@ namespace BTL
         {
             var position = Vector2.zero;
             var size = rectTransform.rect.size;
-            container.draw(new Rect(position, size));
+            container.ApplyLayout(new Rect(position, size));
 
             instance = null;
         }
 
-        public Item addItem(Item item)
+        public Item AddItem(Item item)
         {
-            container?.addItem(item);
+            container?.AddItem(item);
             return item;
         }
 
@@ -59,10 +59,15 @@ namespace BTL
             protected ButtonLayoutManager layoutManager { get => instance; }
             protected Item()
             {
-                layoutManager.addItem(this);
+                layoutManager.AddItem(this);
             }
 
-            public abstract void draw(Rect rect);
+            /// <summary>
+            /// レイアウト調整を適用
+            /// </summary>
+            /// <param name="rect">描画可能座標とサイズ</param>
+            /// <returns>描画サイズ</returns>
+            public abstract Vector2 ApplyLayout(Rect rect);
         }
 
         public abstract class Container : Item, System.IDisposable
@@ -81,7 +86,7 @@ namespace BTL
                 layoutManager.container = container;
             }
 
-            public void addItem(Item item)
+            public void AddItem(Item item)
             {
                 childs.Add(item);
             }
@@ -90,72 +95,84 @@ namespace BTL
 
     public class BTLVertical : ButtonLayoutManager.Container
     {
-        public override void draw(Rect rect)
+        public override Vector2 ApplyLayout(Rect rect)
         {
-            if (childs.Count == 0) return;
-
-            //Debug.Log($"BTVertical {rect}");
-            var height = layoutManager.buttonHeight;
+            if (childs.Count == 0) return Vector2.zero;
 
             var position = rect.position;
-            var size = new Vector2(rect.width, height);
+            var newSize = new Vector2(rect.width, 0.0f);
 
             foreach (var item in childs) {
-                item.draw(new Rect(position, size));
+                var size = item.ApplyLayout(new Rect(position, rect.size));
 
-                position.y -= height + layoutManager.buttonMargin;
+                position.y += -(size.y);
+                newSize.y += size.y;
             }
+            return newSize;
         }
     }
 
     public class BTLHorizontal : ButtonLayoutManager.Container
     {
-        public override void draw(Rect rect)
+        public override Vector2 ApplyLayout(Rect rect)
         {
-            if (childs.Count == 0) return;
+            if (childs.Count == 0) return Vector2.zero;
 
-            //Debug.Log($"BTHorizontal {rect}");
             var width = rect.width / childs.Count;
 
             var position = rect.position;
-            var size = new Vector2(width, rect.height);
+            var newSize = Vector2.zero;
 
             foreach (var item in childs) {
-                item.draw(new Rect(position, size));
+                var size = item.ApplyLayout(new Rect(position, new Vector2(width, rect.height)));
 
-                position.x += width + layoutManager.buttonMargin;
+                if (newSize.x * newSize.y < size.x * size.x) {
+                    newSize = size;
+                }
+
+                position.x += width;
             }
+            return newSize;
         }
     }
 
     public class BTLButton : ButtonLayoutManager.Item
     {
+        public string label { get; }
+        public Text text { get; }
         public Button button { get; }
+        public RectTransform rectTransform { get; }
 
-        public BTLButton(string text, UnityAction action = null)
+        public BTLButton(string labelStr, System.Action<Button> action = null)
         {
+            label = labelStr;
             button = GameObject.Instantiate(layoutManager.buttonPrefab, layoutManager.rectTransform.transform);
+            button.name = labelStr;
 
-            var textComp = button.GetComponentInChildren<Text>();
-            if (textComp) {
-                textComp.text = text;
-                textComp.fontSize = layoutManager.fontSize;
-            }
+            text = button.GetComponentInChildren<Text>();
+            rectTransform = button.GetComponent<RectTransform>();
 
             if (action != null) {
-                button.onClick.AddListener(action);
+                button.onClick.AddListener(() => action(button));
             }
         }
 
-        public override void draw(Rect rect)
+        public override Vector2 ApplyLayout(Rect rect)
         {
-            //Debug.Log("BTButton");
+            if (text) {
+                text.text = label;
+                text.fontSize = layoutManager.fontSize;
+            }
 
-            var rectTransform = button.GetComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0, 1);
-            rectTransform.anchorMax = new Vector2(0, 1);
-            rectTransform.localPosition = rect.position;
-            rectTransform.sizeDelta = new Vector2(rect.width, layoutManager.buttonHeight);
+            if (rectTransform) {
+                rectTransform.anchorMin = new Vector2(0, 1);
+                rectTransform.anchorMax = new Vector2(0, 1);
+                rectTransform.localPosition = new Vector2(rect.position.x + layoutManager.buttonMargin, rect.position.y - layoutManager.buttonMargin);
+                rectTransform.sizeDelta = new Vector2(rect.width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
+
+                return new Vector2(rect.width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
+            }
+            return Vector2.zero;
         }
     }
 }

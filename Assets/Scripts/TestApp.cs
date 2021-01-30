@@ -28,25 +28,29 @@ namespace testapp
         public void Start()
         {
             using (new ButtonLayoutManager(buttonLayout, buttonPrefab)) {
+
                 using (new BTLHorizontal()) {
+                    firstButton = new BTLButton("Button1", onClick).button;
                     using (new BTLVertical()) {
-                        firstButton = new BTLButton("Button1", () => Debug.Log("press button")).button;
-                        new BTLButton("Log1", () => textLog.text = "Log1");
-                        new BTLButton("Log2", () => textLog.text = "Log2");
-                    }
-                    using (new BTLVertical()) {
-                        new BTLButton("Button1");
-                        new BTLButton("Button1");
-                        new BTLButton("Button1");
-                        new BTLButton("Button1");
-                        new BTLButton("Button1");
+                        new BTLButton("Button2", onClick);
+                        using (new BTLHorizontal()) {
+                            using (new BTLVertical()) {
+                                new BTLButton("Button3", onClick);
+                                new BTLButton("Button4", onClick);
+                            }
+                            using (new BTLVertical()) {
+                                new BTLButton("Button5", onClick);
+                                new BTLButton("Button6", onClick);
+                            }
+                        }
                     }
                 }
-                new BTLButton("Button1");
             }
 
             EventSystem.current.SetSelectedGameObject(firstButton.gameObject);
         }
+
+        void onClick(Button button) => textLog.text = button.name;
     }
 }
 
