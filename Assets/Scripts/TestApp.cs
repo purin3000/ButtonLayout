@@ -24,7 +24,9 @@ namespace testapp
         {
             textTitle.text = "ButtonLayout Example";
 
-            using (new ButtonLayoutManager(resources)) {
+            var layoutManager = new ButtonLayoutManager(resources);
+
+            using (new BTLBuilder(layoutManager)) {
 
                 var firstButton = new BTLButton("Button1", onClick).button;
 

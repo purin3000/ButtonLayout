@@ -5,6 +5,11 @@ using UnityEngine.UI;
 
 namespace BTL
 {
+    public class ButtonLayout : MonoBehaviour
+    {
+
+    }
+
     [System.Serializable]
     public class ButtonLayoutResources
     {
@@ -13,24 +18,19 @@ namespace BTL
         public Toggle togglePrefab;
     }
 
-    public class ButtonLayoutManager : System.IDisposable
+    public class ButtonLayoutManager
     {
-        private static ButtonLayoutManager instance = null;
-
         public int fontSize;
         public int buttonHeight;
         public int buttonMargin;
 
-        public Container container;
+        public BTLBuilder.BaseContainer container;
 
         public ButtonLayoutResources resources { get; }
-        
+
         public ButtonLayoutManager(ButtonLayoutResources resources)
         {
-            instance = this;
-
             this.resources = resources;
-            container = new BTLVertical();
 
 #if UNITY_TVOS
             fontSize = 24;
@@ -44,34 +44,90 @@ namespace BTL
 #endif
         }
 
-        void System.IDisposable.Dispose()
+        public void UpdateLayout()
         {
             var position = Vector2.zero;
             var size = resources.rectTransform.rect.size;
-            container.ApplyLayout(position, size.x);
+            container.ApplyLayout(this, position, size.x);
+        }
+    }
 
+    public class BTLBuilder : System.IDisposable
+    {
+        private static BTLBuilder instance = null;
+        
+        private ButtonLayoutManager layoutManager { get; }
+
+        public BTLBuilder(ButtonLayoutManager layoutManager)
+        {
+            instance = this;
+
+            this.layoutManager = layoutManager;
+
+            layoutManager.container = new BTLVertical();
+        }
+
+        void System.IDisposable.Dispose()
+        {
             instance = null;
+
+            layoutManager.UpdateLayout();
         }
 
         public Item AddItem(Item item)
         {
-            container?.AddItem(item);
+            layoutManager.container?.AddItem(item);
             return item;
         }
 
         public abstract class Item
         {
-            protected ButtonLayoutManager layoutManager { get => instance; }
-            protected Item() => layoutManager.AddItem(this);
+            protected BTLBuilder builder { get => instance; }
+            protected ButtonLayoutResources resources => builder.layoutManager.resources;
+            protected Item() => builder.AddItem(this);
 
             /// <summary>
             /// レイアウト調整を適用
             /// </summary>
             /// <param name="rect">描画可能座標とサイズ</param>
             /// <returns>描画サイズ</returns>
-            public abstract Vector2 ApplyLayout(Vector2 position, float width);
+            public abstract Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width);
             public virtual int CalColumn() => 1;
-            protected Vector2 ButtonApplyLayoutImpl(Text text, RectTransform rectTransform, string label, Vector2 position, float width)
+        }
+
+        public abstract class BaseContainer : Item, System.IDisposable
+        {
+            protected BaseContainer container;
+            protected List<Item> childs = new List<Item>();
+
+            public BaseContainer()
+            {
+                container = builder.layoutManager.container;
+                builder.layoutManager.container = this;
+            }
+
+            void System.IDisposable.Dispose()
+            {
+                builder.layoutManager.container = container;
+            }
+
+            public void AddItem(Item item) => childs.Add(item);
+        }
+
+        public abstract class BaseButton : Item
+        {
+            public string label { get; protected set; }
+            public Text text { get; protected set; }
+            public RectTransform rectTransform { get; protected set; }
+            protected T Setup<T>(T go, string labelStr) where T : Component
+            {
+                label = labelStr;
+                text = go.GetComponentInChildren<Text>();
+                rectTransform = go.GetComponent<RectTransform>();
+                go.name = labelStr;
+                return go;
+            }
+            public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
             {
                 if (text) {
                     text.text = label;
@@ -81,45 +137,33 @@ namespace BTL
                 if (rectTransform) {
                     rectTransform.anchorMin = new Vector2(0, 1);
                     rectTransform.anchorMax = new Vector2(0, 1);
-                    rectTransform.localPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
+                    rectTransform.pivot = new Vector2(0, 1);
+                    rectTransform.anchoredPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
                     rectTransform.sizeDelta = new Vector2(width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
+
+                    //rectTransform.SetAnchorWithKeepingPosition(new Vector2(0, 0), new Vector2(1, 1));
+                    //rectTransform.anchorMin = new Vector2(0, 0);
+                    //rectTransform.anchorMax = new Vector2(1, 1);
+                    //rectTransform.anchoredPosition = new Vector2(layoutManager.buttonMargin, layoutManager.buttonMargin);
+                    //rectTransform.sizeDelta = new Vector2(layoutManager.buttonMargin, layoutManager.buttonHeight);
 
                     return new Vector2(width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
                 }
                 return Vector2.zero;
             }
         }
-
-        public abstract class Container : Item, System.IDisposable
-        {
-            protected Container container;
-            protected List<Item> childs = new List<Item>();
-
-            public Container()
-            {
-                container = layoutManager.container;
-                layoutManager.container = this;
-            }
-
-            void System.IDisposable.Dispose()
-            {
-                layoutManager.container = container;
-            }
-
-            public void AddItem(Item item) => childs.Add(item);
-        }
     }
 
-    public class BTLVertical : ButtonLayoutManager.Container
+    public class BTLVertical : BTLBuilder.BaseContainer
     {
-        public override Vector2 ApplyLayout(Vector2 position, float width)
+        public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
         {
             if (childs.Count == 0) return Vector2.zero;
 
             var newSize = new Vector2(width, 0.0f);
 
             foreach (var item in childs) {
-                var size = item.ApplyLayout(position, width);
+                var size = item.ApplyLayout(layoutManager, position, width);
 
                 position.y += -(size.y);
                 newSize.y += size.y;
@@ -137,12 +181,12 @@ namespace BTL
         }
     }
 
-    public class BTLHorizontal : ButtonLayoutManager.Container
+    public class BTLHorizontal : BTLBuilder.BaseContainer
     {
         public bool adjustWidth { get; }
         public BTLHorizontal(bool adjustWidth = true) { this.adjustWidth = adjustWidth; }
 
-        public override Vector2 ApplyLayout(Vector2 position, float width)
+        public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
         {
             if (childs.Count == 0) return Vector2.zero;
 
@@ -160,7 +204,7 @@ namespace BTL
                     width2 = width * item.CalColumn() / totalColumn;
                 }
 
-                var size = item.ApplyLayout(position, width2);
+                var size = item.ApplyLayout(layoutManager, position, width2);
 
                 if (newSize.x * newSize.y < size.x * size.x) {
                     newSize = size;
@@ -181,49 +225,118 @@ namespace BTL
         }
     }
 
-    public class BTLButton : ButtonLayoutManager.Item
+    public class BTLButton : BTLBuilder.BaseButton
     {
-        public string label { get; }
-        public Text text { get; }
         public Button button { get; }
-        public RectTransform rectTransform { get; }
         public BTLButton(string labelStr, System.Action<Button> action = null)
         {
-            label = labelStr;
-            button = GameObject.Instantiate(layoutManager.resources.buttonPrefab, layoutManager.resources.rectTransform.transform);
-            button.name = labelStr;
-
-            text = button.GetComponentInChildren<Text>();
-            rectTransform = button.GetComponent<RectTransform>();
-
+            button = Setup(GameObject.Instantiate(resources.buttonPrefab, resources.rectTransform.transform), labelStr);
             if (action != null) {
                 button.onClick.AddListener(() => action(button));
             }
         }
-
-        public override Vector2 ApplyLayout(Vector2 position, float width) => ButtonApplyLayoutImpl(text, rectTransform, label, position, width);
     }
 
-    public class BTLToggle : ButtonLayoutManager.Item
+    public class BTLToggle : BTLBuilder.BaseButton
     {
-        public string label { get; }
-        public Text text { get; }
         public Toggle toggle { get; }
-        public RectTransform rectTransform { get; }
         public BTLToggle(string labelStr, System.Action<Toggle, bool> action = null)
         {
-            label = labelStr;
-            toggle = GameObject.Instantiate(layoutManager.resources.togglePrefab, layoutManager.resources.rectTransform.transform);
-            toggle.name = labelStr;
-
-            text = toggle.GetComponentInChildren<Text>();
-            rectTransform = toggle.GetComponent<RectTransform>();
-
+            toggle = Setup(GameObject.Instantiate(resources.togglePrefab, resources.rectTransform.transform), labelStr);
             if (action != null) {
                 toggle.onValueChanged.AddListener((ret) => action(toggle, ret));
             }
         }
-
-        public override Vector2 ApplyLayout(Vector2 position, float width) => ButtonApplyLayoutImpl(text, rectTransform, label, position, width);
     }
+
+
+    public static class RectTransformExtension
+    {
+        /// <summary>
+        /// 座標を保ったままPivotを変更する
+        /// </summary>
+        /// <param name="rectTransform">自身の参照</param>
+        /// <param name="targetPivot">変更先のPivot座標</param>
+        public static void SetPivotWithKeepingPosition(this RectTransform rectTransform, Vector2 targetPivot)
+        {
+            var diffPivot = targetPivot - rectTransform.pivot;
+            rectTransform.pivot = targetPivot;
+            var diffPos = new Vector2(rectTransform.sizeDelta.x * diffPivot.x, rectTransform.sizeDelta.y * diffPivot.y);
+            rectTransform.anchoredPosition += diffPos;
+        }
+        /// <summary>
+        /// 座標を保ったままPivotを変更する
+        /// </summary>
+        /// <param name="rectTransform">自身の参照</param>
+        /// <param name="x">変更先のPivotのx座標</param>
+        /// <param name="y">変更先のPivotのy座標</param>
+        public static void SetPivotWithKeepingPosition(this RectTransform rectTransform, float x, float y)
+        {
+            rectTransform.SetPivotWithKeepingPosition(new Vector2(x, y));
+        }
+        /// <summary>
+        /// 座標を保ったままAnchorを変更する
+        /// </summary>
+        /// <param name="rectTransform">自身の参照</param>
+        /// <param name="targetAnchor">変更先のAnchor座標 (min,maxが共通の場合)</param>
+        public static void SetAnchorWithKeepingPosition(this RectTransform rectTransform, Vector2 targetAnchor)
+        {
+            rectTransform.SetAnchorWithKeepingPosition(targetAnchor, targetAnchor);
+        }
+        /// <summary>
+        /// 座標を保ったままAnchorを変更する
+        /// </summary>
+        /// <param name="rectTransform">自身の参照</param>
+        /// <param name="x">変更先のAnchorのx座標 (min,maxが共通の場合)</param>
+        /// <param name="y">変更先のAnchorのy座標 (min,maxが共通の場合)</param>
+        public static void SetAnchorWithKeepingPosition(this RectTransform rectTransform, float x, float y)
+        {
+            rectTransform.SetAnchorWithKeepingPosition(new Vector2(x, y));
+        }
+        /// <summary>
+        /// 座標を保ったままAnchorを変更する
+        /// </summary>
+        /// <param name="rectTransform">自身の参照</param>
+        /// <param name="targetMinAnchor">変更先のAnchorMin座標</param>
+        /// <param name="targetMaxAnchor">変更先のAnchorMax座標</param>
+        public static void SetAnchorWithKeepingPosition(this RectTransform rectTransform, Vector2 targetMinAnchor, Vector2 targetMaxAnchor)
+        {
+            var parent = rectTransform.parent as RectTransform;
+            if (parent == null) { Debug.LogError("Parent cannot find."); }
+
+            var diffMin = targetMinAnchor - rectTransform.anchorMin;
+            var diffMax = targetMaxAnchor - rectTransform.anchorMax;
+            // anchorの更新
+            rectTransform.anchorMin = targetMinAnchor;
+            rectTransform.anchorMax = targetMaxAnchor;
+            // 上下左右の距離の差分を計算
+            var diffLeft = parent.rect.width * diffMin.x;
+            var diffRight = parent.rect.width * diffMax.x;
+            var diffBottom = parent.rect.height * diffMin.y;
+            var diffTop = parent.rect.height * diffMax.y;
+            // サイズと座標の修正
+            rectTransform.sizeDelta += new Vector2(diffLeft - diffRight, diffBottom - diffTop);
+            var pivot = rectTransform.pivot;
+            rectTransform.anchoredPosition -= new Vector2(
+                 (diffLeft * (1 - pivot.x)) + (diffRight * pivot.x),
+                 (diffBottom * (1 - pivot.y)) + (diffTop * pivot.y)
+            );
+        }
+        /// <summary>
+        /// 座標を保ったままAnchorを変更する
+        /// </summary>
+        /// <param name="rectTransform">自身の参照</param>
+        /// <param name="minX">変更先のAnchorMinのx座標</param>
+        /// <param name="minY">変更先のAnchorMinのy座標</param>
+        /// <param name="maxX">変更先のAnchorMaxのx座標</param>
+        /// <param name="maxY">変更先のAnchorMaxのy座標</param>
+        public static void SetAnchorWithKeepingPosition(this RectTransform rectTransform, float minX, float minY, float maxX, float maxY)
+        {
+            rectTransform.SetAnchorWithKeepingPosition(new Vector2(minX, minY), new Vector2(maxX, maxY));
+        }
+    }
+
 }
+
+
+
