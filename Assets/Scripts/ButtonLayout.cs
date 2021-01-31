@@ -5,11 +5,6 @@ using UnityEngine.UI;
 
 namespace BTL
 {
-    public class ButtonLayout : MonoBehaviour
-    {
-
-    }
-
     [System.Serializable]
     public class ButtonLayoutResources
     {
@@ -23,6 +18,8 @@ namespace BTL
         public int fontSize;
         public int buttonHeight;
         public int buttonMargin;
+
+        Vector2 baseSize;
 
         public BTLBuilder.BaseContainer container;
 
@@ -46,9 +43,12 @@ namespace BTL
 
         public void UpdateLayout()
         {
-            var position = Vector2.zero;
             var size = resources.rectTransform.rect.size;
-            container.ApplyLayout(this, position, size.x);
+            if (baseSize != size) {
+                var position = Vector2.zero;
+                container.ApplyLayout(this, position, size.x);
+                baseSize = resources.rectTransform.rect.size;
+            }
         }
     }
 
