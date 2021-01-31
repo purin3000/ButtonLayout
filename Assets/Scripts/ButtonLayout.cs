@@ -26,7 +26,7 @@ namespace BTL
 
         Vector2 baseSize;
 
-        public BTLBuilder.BaseContainer container;
+        public BTLDrawer.ContainerDrawer container = new BTLDrawer.VerticalDrawer();
 
         public ButtonLayoutResources resources { get; }
 
@@ -48,71 +48,22 @@ namespace BTL
                 baseSize = resources.rectTransform.rect.size;
             }
         }
-
-        interface IBTLItem
-        {
-            Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width);
-        }
     }
 
-    public class BTLBuilder : System.IDisposable
+    public class BTLDrawer
     {
-        private static BTLBuilder currentBuilder = null;
-        
-        private ButtonLayoutManager layoutManager { get; }
-
-        public BTLBuilder(ButtonLayoutManager layoutManager)
+        public interface ItemDrawer
         {
-            currentBuilder = this;
-            this.layoutManager = layoutManager;
-            layoutManager.container = new BTLVertical();
+            int CalColumn();
+            Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width);
         }
 
-        void System.IDisposable.Dispose()
+        public abstract class ContainerDrawer : ItemDrawer
         {
-            currentBuilder = null;
-            layoutManager.UpdateLayout();
-        }
-
-        public Item AddItem(Item item)
-        {
-            layoutManager.container?.AddItem(item);
-            return item;
-        }
-
-        public abstract class Item
-        {
-            protected ButtonLayoutResources resources => currentBuilder.layoutManager.resources;
-
-            protected Item() => currentBuilder.AddItem(this);
-
-            /// <summary>
-            /// レイアウト調整を適用
-            /// </summary>
-            /// <param name="rect">描画可能座標とサイズ</param>
-            /// <returns>描画サイズ</returns>
-            public abstract Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width);
+            protected List<ItemDrawer> childs = new List<ItemDrawer>();
+            public void AddDrawer(ItemDrawer item) => childs.Add(item);
             public abstract int CalColumn();
-        }
-
-        public abstract class BaseContainer : Item, System.IDisposable
-        {
-            protected BaseContainer container;
-            protected List<Item> childs = new List<Item>();
-
-            public BaseContainer()
-            {
-                container = currentBuilder.layoutManager.container;
-                currentBuilder.layoutManager.container = this;
-            }
-
-            void System.IDisposable.Dispose()
-            {
-                currentBuilder.layoutManager.container = container;
-            }
-
-            public void AddItem(Item item) => childs.Add(item);
-
+            public abstract Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width);
             public int CalcChildColumn()
             {
                 int total = 0;
@@ -121,7 +72,6 @@ namespace BTL
                 }
                 return total;
             }
-
             public int CalcMaxColumn()
             {
                 int total = 1;
@@ -130,6 +80,118 @@ namespace BTL
                 }
                 return total;
             }
+        }
+
+        public class VerticalDrawer : ContainerDrawer
+        {
+            public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
+            {
+                if (childs.Count == 0) return Vector2.zero;
+
+                var newSize = new Vector2(width, 0.0f);
+
+                foreach (var item in childs) {
+                    var size = item.ApplyLayout(layoutManager, position, width);
+
+                    position.y += -size.y;
+                    newSize.y += size.y;
+                }
+                return newSize;
+            }
+
+            public override int CalColumn() => CalcMaxColumn();
+        }
+
+        public class HorizontalDrawer : ContainerDrawer
+        {
+            public bool adjustWidth { get; }
+            public HorizontalDrawer(bool adjustWidth = true) { this.adjustWidth = adjustWidth; }
+
+            public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
+            {
+                if (childs.Count == 0) return Vector2.zero;
+
+                float totalColumn = CalcChildColumn();
+
+                var newSize = Vector2.zero;
+                foreach (var item in childs) {
+                    var width2 = width / childs.Count;
+                    if (adjustWidth) {
+                        width2 = width * item.CalColumn() / totalColumn;
+                    }
+
+                    var size = item.ApplyLayout(layoutManager, position, width2);
+
+                    if (newSize.x * newSize.y < size.x * size.x) {
+                        newSize = size;
+                    }
+
+                    position.x += width2;
+                }
+                return newSize;
+            }
+
+            public override int CalColumn() => CalcChildColumn();
+        }
+
+        public class ButtonDrawer : ItemDrawer
+        {
+            public RectTransform rectTransform { get; protected set; } = null;
+            public ButtonDrawer(RectTransform rectTransform) => this.rectTransform = rectTransform;
+
+            public Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
+            {
+                if (rectTransform) {
+                    rectTransform.anchorMin = new Vector2(0, 1);
+                    rectTransform.anchorMax = new Vector2(0, 1);
+                    rectTransform.pivot = new Vector2(0, 1);
+                    rectTransform.anchoredPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
+                    rectTransform.sizeDelta = new Vector2(width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
+
+                    return new Vector2(width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
+                }
+                return Vector2.zero;
+            }
+
+            public int CalColumn() => 1;
+        }
+    }
+
+    public class BTLBuilder : System.IDisposable
+    {
+        private static BTLBuilder currentBuilder = null;
+
+        private ButtonLayoutManager layoutManager { get; }
+
+        public BTLBuilder(ButtonLayoutManager layoutManager)
+        {
+            currentBuilder = this;
+            this.layoutManager = layoutManager;
+        }
+
+        void System.IDisposable.Dispose()
+        {
+            currentBuilder = null;
+            layoutManager.UpdateLayout();
+        }
+
+        public abstract class Item
+        {
+            protected ButtonLayoutResources resources => currentBuilder.layoutManager.resources;
+        }
+
+        public abstract class BaseContainer : Item, System.IDisposable
+        {
+            protected BTLDrawer.ContainerDrawer oldContainer;
+
+            protected BaseContainer(BTLDrawer.ContainerDrawer newContainer)
+            {
+                currentBuilder.layoutManager.container.AddDrawer(newContainer);
+                oldContainer = currentBuilder.layoutManager.container;
+                currentBuilder.layoutManager.container = newContainer;
+            }
+
+            void System.IDisposable.Dispose() => currentBuilder.layoutManager.container = oldContainer;
         }
 
         public abstract class BaseButton : Item
@@ -150,6 +212,7 @@ namespace BTL
 
                 rectTransform = go.GetComponent<RectTransform>();
                 go.name = objName;
+                currentBuilder.layoutManager.container.AddDrawer(new BTLDrawer.ButtonDrawer(rectTransform));
                 return go;
             }
 
@@ -157,77 +220,20 @@ namespace BTL
             {
                 rectTransform = go.GetComponent<RectTransform>();
                 go.name = objName;
+                currentBuilder.layoutManager.container.AddDrawer(new BTLDrawer.ButtonDrawer(rectTransform));
                 return go;
             }
-
-            public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
-            {
-                if (rectTransform) {
-                    rectTransform.anchorMin = new Vector2(0, 1);
-                    rectTransform.anchorMax = new Vector2(0, 1);
-                    rectTransform.pivot = new Vector2(0, 1);
-                    rectTransform.anchoredPosition = new Vector2(position.x + layoutManager.buttonMargin, position.y - layoutManager.buttonMargin);
-                    rectTransform.sizeDelta = new Vector2(width - layoutManager.buttonMargin * 2, layoutManager.buttonHeight);
-
-                    return new Vector2(width, layoutManager.buttonHeight + layoutManager.buttonMargin * 2);
-                }
-                return Vector2.zero;
-            }
-
-            public override int CalColumn() => 1;
         }
     }
 
     public class BTLVertical : BTLBuilder.BaseContainer
     {
-        public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
-        {
-            if (childs.Count == 0) return Vector2.zero;
-
-            var newSize = new Vector2(width, 0.0f);
-
-            foreach (var item in childs) {
-                var size = item.ApplyLayout(layoutManager, position, width);
-
-                position.y += -size.y;
-                newSize.y += size.y;
-            }
-            return newSize;
-        }
-
-        public override int CalColumn() => CalcMaxColumn();
+        public BTLVertical() : base(new BTLDrawer.VerticalDrawer()) { }
     }
 
     public class BTLHorizontal : BTLBuilder.BaseContainer
     {
-        public bool adjustWidth { get; }
-        public BTLHorizontal(bool adjustWidth = true) { this.adjustWidth = adjustWidth; }
-
-        public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
-        {
-            if (childs.Count == 0) return Vector2.zero;
-
-            float totalColumn = CalcChildColumn();
-
-            var newSize = Vector2.zero;
-            foreach (var item in childs) {
-                var width2 = width / childs.Count;
-                if (adjustWidth) {
-                    width2 = width * item.CalColumn() / totalColumn;
-                }
-
-                var size = item.ApplyLayout(layoutManager, position, width2);
-
-                if (newSize.x * newSize.y < size.x * size.x) {
-                    newSize = size;
-                }
-
-                position.x += width2;
-            }
-            return newSize;
-        }
-
-        public override int CalColumn() => CalcChildColumn();
+        public BTLHorizontal(bool adjustWidth = true) : base(new BTLDrawer.HorizontalDrawer(adjustWidth)) { }
     }
 
     public class BTLButton : BTLBuilder.BaseButton
@@ -301,6 +307,5 @@ namespace BTL
         }
     }
 }
-
 
 
