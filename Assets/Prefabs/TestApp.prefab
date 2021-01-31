@@ -224,6 +224,14 @@ MonoBehaviour:
       type: 3}
     togglePrefab: {fileID: 2452325538741412684, guid: bbe18814a8309af48a464825db4ed48d,
       type: 3}
+    sliderPrefab: {fileID: 586434264043609289, guid: 85d18ae7064d04c4794cf5406928bbfe,
+      type: 3}
+    inputFieldPrefab: {fileID: 1080401173060792146, guid: c21e3ade1b8697d409da17f5c998c7c0,
+      type: 3}
+    textPrefab: {fileID: 7703958223988421391, guid: dd96b4c3383a23442a6ed811426c2ae4,
+      type: 3}
+    dropdownPrefab: {fileID: 1512578951249546335, guid: 66e7f5307a7ca794883d723ecee509d9,
+      type: 3}
 --- !u!1 &5291881193096476430
 GameObject:
   m_ObjectHideFlags: 0

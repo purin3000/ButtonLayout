@@ -30,6 +30,7 @@ namespace testapp
 
             using (new BTLBuilder(layoutManager)) {
 
+                new BTLText("Text");
                 var firstButton = new BTLButton("Button1", onClick).button;
 
                 using (new BTLHorizontal()) {
@@ -50,7 +51,10 @@ namespace testapp
                     }
                     using (new BTLVertical()) {
                         new BTLButton("Button2-3", onClick);
-                        new BTLToggle("Button2-3", onValueChanged);
+                        new BTLToggle("Toggle", onValueChanged);
+                        new BTLSlider("Slider", onValueChanged);
+                        new BTLInputField("Inputfield", onValueChanged);
+                        new BTLDropdown("Dropdown", onValueChanged);
                     }
                 }
 
@@ -63,8 +67,11 @@ namespace testapp
             layoutManager.UpdateLayout();
         }
 
-        void onClick(Button button) => textLog.text = button.name;
-        void onValueChanged(Toggle toggle, bool ret) => textLog.text = $"{toggle.name}:{ret}";
+        void onClick(Button sender) => textLog.text = sender.name;
+        void onValueChanged(Toggle sender, bool ret) => textLog.text = $"{sender.name}:{ret}";
+        void onValueChanged(Slider sender, float ret) => textLog.text = $"{sender.name}:{ret}";
+        void onValueChanged(InputField sender, string ret) => textLog.text = $"{sender.name}:{ret}";
+        void onValueChanged(Dropdown sender, int ret) => textLog.text = $"{sender.name}:{ret}";
     }
 }
 

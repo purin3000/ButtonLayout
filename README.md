@@ -2,6 +2,10 @@
 
 ## 説明
 
+実機デバッグのUI構築用
+
+![スクリーンショット](Images/ScreenShot0.jpg "スクリーンショット")
+
 ``` C#:Example
 
 using System.Collections;
@@ -77,4 +81,3 @@ namespace testapp
 
 ```
 
-![スクリーンショット](Images/ScreenShot0.jpg "スクリーンショット")
