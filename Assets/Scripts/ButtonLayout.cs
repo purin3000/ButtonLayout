@@ -98,7 +98,6 @@ namespace BTL
                 }
                 return newSize;
             }
-
             public override int CalColumn() => CalcMaxColumn();
         }
 
@@ -106,7 +105,6 @@ namespace BTL
         {
             public bool adjustWidth { get; }
             public HorizontalDrawer(bool adjustWidth = true) { this.adjustWidth = adjustWidth; }
-
             public override Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
             {
                 if (childs.Count == 0) return Vector2.zero;
@@ -130,7 +128,6 @@ namespace BTL
                 }
                 return newSize;
             }
-
             public override int CalColumn() => CalcChildColumn();
         }
 
@@ -138,7 +135,6 @@ namespace BTL
         {
             public RectTransform rectTransform { get; protected set; } = null;
             public ButtonDrawer(RectTransform rectTransform) => this.rectTransform = rectTransform;
-
             public Vector2 ApplyLayout(ButtonLayoutManager layoutManager, Vector2 position, float width)
             {
                 if (rectTransform) {
@@ -152,7 +148,6 @@ namespace BTL
                 }
                 return Vector2.zero;
             }
-
             public int CalColumn() => 1;
         }
     }
@@ -297,9 +292,15 @@ namespace BTL
     public class BTLDropdown : BTLBuilder.BaseButton
     {
         public Dropdown dropdown { get; }
-        public BTLDropdown(string labelStr, System.Action<Dropdown, int> action = null, int initValue = 0)
+        public BTLDropdown(string labelStr, System.Action<Dropdown, int> action = null, int initValue = 0, List<string> options = null)
         {
             dropdown = Setup2(GameObject.Instantiate(resources.dropdownPrefab, resources.rectTransform.transform), labelStr);
+            
+            if (options != null) {
+                dropdown.ClearOptions();
+                dropdown.AddOptions(options);
+            }
+
             dropdown.value = initValue;
             if (action != null) {
                 dropdown.onValueChanged.AddListener((ret) => action(dropdown, ret));

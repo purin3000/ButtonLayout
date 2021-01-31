@@ -54,7 +54,7 @@ namespace testapp
                         new BTLToggle("Toggle", onValueChanged);
                         new BTLSlider("Slider", onValueChanged);
                         new BTLInputField("Inputfield", onValueChanged);
-                        new BTLDropdown("Dropdown", onValueChanged);
+                        new BTLDropdown("Dropdown", onValueChanged, 0, new List<string>() { "test1", "test2" });
                     }
                 }
 
